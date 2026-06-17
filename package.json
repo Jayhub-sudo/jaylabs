@@ -1,0 +1,6 @@
+{
+  "name": "jaylabs-tillberg-assets-app",
+  "version": "0.1.0",
+  "private": true,
+  "main": "app/App.jsx"
+}
