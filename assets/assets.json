@@ -1,6 +1,27 @@
 {
-  "materials": [],
-  "fabrics": [],
+  "materials": [
+    {
+      "id": "MAT-001",
+      "name": "Warm Oak Veneer",
+      "category": "Material",
+      "manufacturer": "Demo Manufacturer",
+      "finish": "Natural matte",
+      "color": "Warm oak",
+      "status": "Active",
+      "usage": "Wall panels, furniture, joinery"
+    }
+  ],
+  "fabrics": [
+    {
+      "id": "FAB-001",
+      "name": "Soft Linen Sand",
+      "category": "Fabric",
+      "manufacturer": "Demo Textile House",
+      "color": "Sand",
+      "status": "Active",
+      "usage": "Loose furniture, cushions, panels"
+    }
+  ],
   "carpets": [],
   "flooring": [],
   "wallcoverings": [],
