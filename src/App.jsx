@@ -14,6 +14,16 @@ export default function App() {
     "Accessory",
   ];
 
+  const projectOptions = [
+    "Unassigned",
+    "Tillberg Concept",
+    "Hospitality Project",
+    "Residential Project",
+    "Cruise Interior",
+    "Mockup Room",
+    "Vendor Review",
+  ];
+
   const emptyForm = {
     category: "Material",
     productNumber: "",
@@ -23,62 +33,52 @@ export default function App() {
     color: "",
     usage: "",
     status: "Active",
+    project: "Unassigned",
+    notes: "",
+    specifications: "",
+    imageUrl: "",
+    imageData: "",
+    favorite: false,
   };
 
+  function normalizeAsset(asset, fallbackCategory) {
+    return {
+      productNumber: "",
+      finish: "",
+      color: "",
+      usage: "",
+      status: "Active",
+      project: "Unassigned",
+      notes: "",
+      specifications: "",
+      imageUrl: "",
+      imageData: "",
+      favorite: false,
+      ...asset,
+      category: asset.category || fallbackCategory,
+    };
+  }
+
   const initialAssets = [
-    ...assetData.materials.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Material",
-    })),
-    ...assetData.fabrics.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Fabric",
-    })),
-    ...assetData.carpets.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Carpet",
-    })),
-    ...assetData.flooring.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Flooring",
-    })),
-    ...assetData.wallcoverings.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Wallcovering",
-    })),
-    ...assetData.furniture.map((item) => ({
-      productNumber: "",
-      finish: "",
-      color: "",
-      usage: "",
-      ...item,
-      category: item.category || "Furniture",
-    })),
+    ...assetData.materials.map((item) => normalizeAsset(item, "Material")),
+    ...assetData.fabrics.map((item) => normalizeAsset(item, "Fabric")),
+    ...assetData.carpets.map((item) => normalizeAsset(item, "Carpet")),
+    ...assetData.flooring.map((item) => normalizeAsset(item, "Flooring")),
+    ...assetData.wallcoverings.map((item) => normalizeAsset(item, "Wallcovering")),
+    ...assetData.furniture.map((item) => normalizeAsset(item, "Furniture")),
   ];
 
   const [assets, setAssets] = useState(() => {
     const savedAssets = localStorage.getItem("jaylabsAssets");
-    return savedAssets ? JSON.parse(savedAssets) : initialAssets;
+    if (!savedAssets) return initialAssets;
+
+    try {
+      return JSON.parse(savedAssets).map((asset) =>
+        normalizeAsset(asset, asset.category || "Material")
+      );
+    } catch {
+      return initialAssets;
+    }
   });
 
   const [form, setForm] = useState(emptyForm);
@@ -88,17 +88,49 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [projectFilter, setProjectFilter] = useState("All");
+  const [manufacturerFilter, setManufacturerFilter] = useState("All");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [error, setError] = useState("");
+
+  const manufacturers = Array.from(
+    new Set(
+      assets
+        .map((asset) => asset.manufacturer)
+        .filter((manufacturer) => manufacturer && manufacturer.trim())
+    )
+  ).sort();
+
+  const projects = Array.from(
+    new Set([
+      ...projectOptions,
+      ...assets
+        .map((asset) => asset.project)
+        .filter((project) => project && project.trim()),
+    ])
+  );
 
   const categories = assetTypes.map((type) => ({
     name: type,
     count: assets.filter((asset) => asset.category === type).length,
   }));
 
+  const manufacturerStats = manufacturers.map((manufacturer) => ({
+    name: manufacturer,
+    count: assets.filter((asset) => asset.manufacturer === manufacturer).length,
+  }));
+
+  const projectStats = projects.map((project) => ({
+    name: project,
+    count: assets.filter((asset) => asset.project === project).length,
+  }));
+
   const totalAssets = assets.length;
   const activeAssets = assets.filter((asset) => asset.status === "Active").length;
   const discontinuedAssets = assets.filter((asset) => asset.status === "Discontinued").length;
   const pendingAssets = assets.filter((asset) => asset.status === "Pending Review").length;
+  const favoriteAssets = assets.filter((asset) => asset.favorite).length;
+  const assetsWithImages = assets.filter((asset) => asset.imageData || asset.imageUrl).length;
 
   const filteredAssets = assets.filter((asset) => {
     const searchText = `
@@ -111,13 +143,27 @@ export default function App() {
       ${asset.color}
       ${asset.usage}
       ${asset.status}
+      ${asset.project}
+      ${asset.notes}
+      ${asset.specifications}
     `.toLowerCase();
 
     const matchesSearch = searchText.includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "All" || asset.category === typeFilter;
     const matchesStatus = statusFilter === "All" || asset.status === statusFilter;
+    const matchesProject = projectFilter === "All" || asset.project === projectFilter;
+    const matchesManufacturer =
+      manufacturerFilter === "All" || asset.manufacturer === manufacturerFilter;
+    const matchesFavorite = !showFavoritesOnly || asset.favorite;
 
-    return matchesSearch && matchesType && matchesStatus;
+    return (
+      matchesSearch &&
+      matchesType &&
+      matchesStatus &&
+      matchesProject &&
+      matchesManufacturer &&
+      matchesFavorite
+    );
   });
 
   function saveAssets(nextAssets) {
@@ -168,6 +214,12 @@ export default function App() {
       color: form.color,
       usage: form.usage,
       status: form.status || "Active",
+      project: form.project || "Unassigned",
+      notes: form.notes,
+      specifications: form.specifications,
+      imageUrl: form.imageUrl,
+      imageData: form.imageData,
+      favorite: form.favorite,
     };
 
     saveAssets([newAsset, ...assets]);
@@ -187,9 +239,16 @@ export default function App() {
       color: asset.color || "",
       usage: asset.usage || "",
       status: asset.status || "Active",
+      project: asset.project || "Unassigned",
+      notes: asset.notes || "",
+      specifications: asset.specifications || "",
+      imageUrl: asset.imageUrl || "",
+      imageData: asset.imageData || "",
+      favorite: asset.favorite || false,
     });
     setSelectedAsset(asset);
     setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function saveEdit() {
@@ -212,6 +271,12 @@ export default function App() {
             color: editForm.color,
             usage: editForm.usage,
             status: editForm.status,
+            project: editForm.project,
+            notes: editForm.notes,
+            specifications: editForm.specifications,
+            imageUrl: editForm.imageUrl,
+            imageData: editForm.imageData,
+            favorite: editForm.favorite,
           }
         : asset
     );
@@ -256,10 +321,22 @@ export default function App() {
       id: `${prefix}-${String(matchingAssets.length + 1).padStart(3, "0")}`,
       name: `${asset.name} Copy`,
       status: "Pending Review",
+      favorite: false,
     };
 
     saveAssets([duplicatedAsset, ...assets]);
     setSelectedAsset(duplicatedAsset);
+  }
+
+  function toggleFavorite(id) {
+    const nextAssets = assets.map((asset) =>
+      asset.id === id ? { ...asset, favorite: !asset.favorite } : asset
+    );
+
+    saveAssets(nextAssets);
+
+    const updatedSelected = nextAssets.find((asset) => asset.id === selectedAsset?.id);
+    if (updatedSelected) setSelectedAsset(updatedSelected);
   }
 
   function resetDemoData() {
@@ -271,9 +348,111 @@ export default function App() {
     setSearchTerm("");
     setTypeFilter("All");
     setStatusFilter("All");
+    setProjectFilter("All");
+    setManufacturerFilter("All");
+    setShowFavoritesOnly(false);
     setSelectedAsset(null);
     setEditingId(null);
     setError("");
+  }
+
+  function clearFilters() {
+    setSearchTerm("");
+    setTypeFilter("All");
+    setStatusFilter("All");
+    setProjectFilter("All");
+    setManufacturerFilter("All");
+    setShowFavoritesOnly(false);
+  }
+
+  function handleImageUpload(event, currentForm, setCurrentForm) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setCurrentForm({
+        ...currentForm,
+        imageData: reader.result,
+        imageUrl: "",
+      });
+      setError("");
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage(currentForm, setCurrentForm) {
+    setCurrentForm({
+      ...currentForm,
+      imageData: "",
+      imageUrl: "",
+    });
+  }
+
+  function getAssetImage(asset) {
+    return asset.imageData || asset.imageUrl || "";
+  }
+
+  function exportCsv() {
+    const headers = [
+      "ID",
+      "Type",
+      "Name",
+      "Product Number",
+      "Manufacturer",
+      "Finish",
+      "Color",
+      "Usage",
+      "Status",
+      "Project",
+      "Notes",
+      "Specifications",
+      "Favorite",
+    ];
+
+    const rows = filteredAssets.map((asset) => [
+      asset.id,
+      asset.category,
+      asset.name,
+      asset.productNumber,
+      asset.manufacturer,
+      asset.finish,
+      asset.color,
+      asset.usage,
+      asset.status,
+      asset.project,
+      asset.notes,
+      asset.specifications,
+      asset.favorite ? "Yes" : "No",
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) =>
+        row
+          .map((cell) => {
+            const value = String(cell ?? "");
+            return `"${value.replace(/"/g, '""')}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "jaylabs-assets.csv";
+    link.click();
+
+    URL.revokeObjectURL(url);
   }
 
   function getStatusStyle(status) {
@@ -308,6 +487,11 @@ export default function App() {
     minHeight: "100vh",
   };
 
+  const sectionStyle = {
+    maxWidth: "1500px",
+    margin: "0 auto",
+  };
+
   const cardStyle = {
     border: "1px solid #ddd",
     borderRadius: "18px",
@@ -322,6 +506,7 @@ export default function App() {
     borderRadius: "10px",
     minWidth: "180px",
     fontSize: "15px",
+    background: "white",
   };
 
   const buttonStyle = {
@@ -358,108 +543,285 @@ export default function App() {
     fontWeight: "bold",
   };
 
+  const imageBoxStyle = {
+    width: "100%",
+    minHeight: "160px",
+    borderRadius: "16px",
+    border: "1px dashed #bbb",
+    background: "#f3f3f1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    color: "#777",
+    fontSize: "14px",
+  };
+
+  function renderImagePreview(asset) {
+    const image = getAssetImage(asset);
+
+    if (!image) {
+      return <div style={imageBoxStyle}>No image</div>;
+    }
+
+    return (
+      <div style={imageBoxStyle}>
+        <img
+          src={image}
+          alt={asset.name}
+          style={{
+            width: "100%",
+            height: "220px",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+    );
+  }
+
   function renderAssetForm(currentForm, setCurrentForm) {
     return (
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "12px",
-          marginTop: "20px",
-        }}
-      >
-        <select
-          value={currentForm.category}
-          onChange={(e) => setCurrentForm({ ...currentForm, category: e.target.value })}
-          style={inputStyle}
+      <>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "12px",
+            marginTop: "20px",
+          }}
         >
-          {assetTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+          <select
+            value={currentForm.category}
+            onChange={(e) => setCurrentForm({ ...currentForm, category: e.target.value })}
+            style={inputStyle}
+          >
+            {assetTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
 
-        <input
-          placeholder="Product Number"
-          value={currentForm.productNumber}
-          onChange={(e) => setCurrentForm({ ...currentForm, productNumber: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Product Number"
+            value={currentForm.productNumber}
+            onChange={(e) => setCurrentForm({ ...currentForm, productNumber: e.target.value })}
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Asset Name *"
-          value={currentForm.name}
-          onChange={(e) => setCurrentForm({ ...currentForm, name: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Asset Name *"
+            value={currentForm.name}
+            onChange={(e) => setCurrentForm({ ...currentForm, name: e.target.value })}
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Manufacturer *"
-          value={currentForm.manufacturer}
-          onChange={(e) => setCurrentForm({ ...currentForm, manufacturer: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Manufacturer *"
+            value={currentForm.manufacturer}
+            onChange={(e) => setCurrentForm({ ...currentForm, manufacturer: e.target.value })}
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Finish"
-          value={currentForm.finish}
-          onChange={(e) => setCurrentForm({ ...currentForm, finish: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Finish"
+            value={currentForm.finish}
+            onChange={(e) => setCurrentForm({ ...currentForm, finish: e.target.value })}
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Color"
-          value={currentForm.color}
-          onChange={(e) => setCurrentForm({ ...currentForm, color: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Color"
+            value={currentForm.color}
+            onChange={(e) => setCurrentForm({ ...currentForm, color: e.target.value })}
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Usage"
-          value={currentForm.usage}
-          onChange={(e) => setCurrentForm({ ...currentForm, usage: e.target.value })}
-          style={inputStyle}
-        />
+          <input
+            placeholder="Usage"
+            value={currentForm.usage}
+            onChange={(e) => setCurrentForm({ ...currentForm, usage: e.target.value })}
+            style={inputStyle}
+          />
 
-        <select
-          value={currentForm.status}
-          onChange={(e) => setCurrentForm({ ...currentForm, status: e.target.value })}
-          style={inputStyle}
+          <select
+            value={currentForm.status}
+            onChange={(e) => setCurrentForm({ ...currentForm, status: e.target.value })}
+            style={inputStyle}
+          >
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Discontinued">Discontinued</option>
+            <option value="Pending Review">Pending Review</option>
+          </select>
+
+          <select
+            value={currentForm.project}
+            onChange={(e) => setCurrentForm({ ...currentForm, project: e.target.value })}
+            style={inputStyle}
+          >
+            {projects.map((project) => (
+              <option key={project} value={project}>
+                {project}
+              </option>
+            ))}
+          </select>
+
+          <input
+            placeholder="Image URL"
+            value={currentForm.imageUrl}
+            onChange={(e) =>
+              setCurrentForm({
+                ...currentForm,
+                imageUrl: e.target.value,
+                imageData: "",
+              })
+            }
+            style={inputStyle}
+          />
+
+          <label
+            style={{
+              ...inputStyle,
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              background: "#fff",
+            }}
+          >
+            Upload Image
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(event) => handleImageUpload(event, currentForm, setCurrentForm)}
+              style={{ display: "none" }}
+            />
+          </label>
+
+          <label
+            style={{
+              ...inputStyle,
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={currentForm.favorite}
+              onChange={(e) =>
+                setCurrentForm({ ...currentForm, favorite: e.target.checked })
+              }
+            />
+            Favorite
+          </label>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "2fr 2fr 1fr",
+            gap: "12px",
+            marginTop: "12px",
+          }}
         >
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-          <option value="Discontinued">Discontinued</option>
-          <option value="Pending Review">Pending Review</option>
-        </select>
-      </div>
+          <textarea
+            placeholder="Notes"
+            value={currentForm.notes}
+            onChange={(e) => setCurrentForm({ ...currentForm, notes: e.target.value })}
+            style={{
+              ...inputStyle,
+              minHeight: "90px",
+              resize: "vertical",
+              fontFamily: "Arial, sans-serif",
+            }}
+          />
+
+          <textarea
+            placeholder="Specifications"
+            value={currentForm.specifications}
+            onChange={(e) =>
+              setCurrentForm({ ...currentForm, specifications: e.target.value })
+            }
+            style={{
+              ...inputStyle,
+              minHeight: "90px",
+              resize: "vertical",
+              fontFamily: "Arial, sans-serif",
+            }}
+          />
+
+          <div>
+            {currentForm.imageData || currentForm.imageUrl ? (
+              <>
+                {renderImagePreview(currentForm)}
+                <button
+                  onClick={() => removeImage(currentForm, setCurrentForm)}
+                  style={{
+                    ...secondaryButtonStyle,
+                    marginTop: "10px",
+                    width: "100%",
+                  }}
+                  type="button"
+                >
+                  Remove Image
+                </button>
+              </>
+            ) : (
+              <div style={imageBoxStyle}>Image preview</div>
+            )}
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
     <main style={pageStyle}>
-      <section>
-        <p style={{ letterSpacing: "2px", fontSize: "12px", color: "#777" }}>
+      <section style={sectionStyle}>
+        <p
+          style={{
+            letterSpacing: "4px",
+            fontSize: "12px",
+            color: "#777",
+            textAlign: "center",
+          }}
+        >
           JAYLABS / MATERIAL INTELLIGENCE
         </p>
 
-        <h1 style={{ fontSize: "52px", marginBottom: "10px" }}>
+        <h1
+          style={{
+            fontSize: "58px",
+            marginBottom: "10px",
+            textAlign: "center",
+          }}
+        >
           Asset Library Dashboard
         </h1>
 
-        <p style={{ fontSize: "18px", color: "#666", maxWidth: "850px" }}>
+        <p
+          style={{
+            fontSize: "18px",
+            color: "#666",
+            maxWidth: "850px",
+            margin: "0 auto",
+            textAlign: "center",
+          }}
+        >
           Digital material library, scanning workflow, FF&E asset intelligence,
-          and project-ready product information.
+          project assignment, manufacturer tracking, and project-ready product information.
         </p>
       </section>
 
-      <section style={{ marginTop: "40px" }}>
-        <h2>System Overview</h2>
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>System Overview</h2>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(6, 1fr)",
             gap: "20px",
             marginTop: "20px",
           }}
@@ -470,8 +832,13 @@ export default function App() {
           </div>
 
           <div style={cardStyle}>
-            <p>Active Assets</p>
+            <p>Active</p>
             <strong style={{ fontSize: "36px" }}>{activeAssets}</strong>
+          </div>
+
+          <div style={cardStyle}>
+            <p>Pending</p>
+            <strong style={{ fontSize: "36px" }}>{pendingAssets}</strong>
           </div>
 
           <div style={cardStyle}>
@@ -480,14 +847,19 @@ export default function App() {
           </div>
 
           <div style={cardStyle}>
-            <p>Pending Review</p>
-            <strong style={{ fontSize: "36px" }}>{pendingAssets}</strong>
+            <p>Favorites</p>
+            <strong style={{ fontSize: "36px" }}>{favoriteAssets}</strong>
+          </div>
+
+          <div style={cardStyle}>
+            <p>With Images</p>
+            <strong style={{ fontSize: "36px" }}>{assetsWithImages}</strong>
           </div>
         </div>
       </section>
 
-      <section style={{ marginTop: "40px" }}>
-        <h2>Asset Categories</h2>
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>Asset Categories</h2>
 
         <div
           style={{
@@ -508,23 +880,23 @@ export default function App() {
         </div>
       </section>
 
-      <section style={{ marginTop: "40px" }}>
-        <h2>Find Assets</h2>
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>Find Assets</h2>
 
         <div
           style={{
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
             gap: "12px",
-            flexWrap: "wrap",
             marginTop: "20px",
             alignItems: "center",
           }}
         >
           <input
-            placeholder="Search by name, product number, manufacturer, usage..."
+            placeholder="Search by name, product number, manufacturer, usage, notes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ ...inputStyle, minWidth: "420px" }}
+            style={inputStyle}
           />
 
           <select
@@ -552,25 +924,60 @@ export default function App() {
             <option value="Pending Review">Pending Review</option>
           </select>
 
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setTypeFilter("All");
-              setStatusFilter("All");
-            }}
-            style={secondaryButtonStyle}
+          <select
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            style={inputStyle}
           >
+            <option value="All">All Projects</option>
+            {projects.map((project) => (
+              <option key={project} value={project}>
+                {project}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={manufacturerFilter}
+            onChange={(e) => setManufacturerFilter(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="All">All Manufacturers</option>
+            {manufacturers.map((manufacturer) => (
+              <option key={manufacturer} value={manufacturer}>
+                {manufacturer}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: "flex", gap: "12px", marginTop: "16px" }}>
+          <button onClick={clearFilters} style={secondaryButtonStyle}>
             Clear Search
+          </button>
+
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            style={{
+              ...buttonStyle,
+              background: showFavoritesOnly ? "#8a5a00" : "#444",
+            }}
+          >
+            {showFavoritesOnly ? "Showing Favorites" : "Show Favorites"}
+          </button>
+
+          <button onClick={exportCsv} style={buttonStyle}>
+            Export CSV
           </button>
         </div>
 
-        <p style={{ color: "#666", marginTop: "10px" }}>
+        <p style={{ color: "#666", marginTop: "14px", textAlign: "center" }}>
           Showing {filteredAssets.length} of {totalAssets} assets
         </p>
       </section>
 
-      <section style={{ marginTop: "40px" }}>
-        <h2>{editingId ? "Edit Asset" : "Add Asset"}</h2>
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>{editingId ? "Edit Asset" : "Add Asset"}</h2>
 
         {error && (
           <div
@@ -615,64 +1022,94 @@ export default function App() {
       </section>
 
       {selectedAsset && (
-        <section style={{ marginTop: "40px" }}>
-          <h2>Selected Asset</h2>
+        <section style={{ ...sectionStyle, marginTop: "40px" }}>
+          <h2 style={{ textAlign: "center" }}>Selected Asset</h2>
 
           <div style={cardStyle}>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "16px",
+                gridTemplateColumns: "1fr 3fr",
+                gap: "24px",
               }}
             >
-              <div>
-                <strong>ID</strong>
-                <p>{selectedAsset.id}</p>
-              </div>
+              <div>{renderImagePreview(selectedAsset)}</div>
 
-              <div>
-                <strong>Type</strong>
-                <p>{selectedAsset.category}</p>
-              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "16px",
+                }}
+              >
+                <div>
+                  <strong>ID</strong>
+                  <p>{selectedAsset.id}</p>
+                </div>
 
-              <div>
-                <strong>Name</strong>
-                <p>{selectedAsset.name}</p>
-              </div>
+                <div>
+                  <strong>Type</strong>
+                  <p>{selectedAsset.category}</p>
+                </div>
 
-              <div>
-                <strong>Status</strong>
-                <p>
-                  <span style={getStatusStyle(selectedAsset.status)}>
-                    {selectedAsset.status}
-                  </span>
-                </p>
-              </div>
+                <div>
+                  <strong>Name</strong>
+                  <p>{selectedAsset.name}</p>
+                </div>
 
-              <div>
-                <strong>Product Number</strong>
-                <p>{selectedAsset.productNumber || "—"}</p>
-              </div>
+                <div>
+                  <strong>Status</strong>
+                  <p>
+                    <span style={getStatusStyle(selectedAsset.status)}>
+                      {selectedAsset.status}
+                    </span>
+                  </p>
+                </div>
 
-              <div>
-                <strong>Manufacturer</strong>
-                <p>{selectedAsset.manufacturer || "—"}</p>
-              </div>
+                <div>
+                  <strong>Product Number</strong>
+                  <p>{selectedAsset.productNumber || "—"}</p>
+                </div>
 
-              <div>
-                <strong>Finish</strong>
-                <p>{selectedAsset.finish || "—"}</p>
-              </div>
+                <div>
+                  <strong>Manufacturer</strong>
+                  <p>{selectedAsset.manufacturer || "—"}</p>
+                </div>
 
-              <div>
-                <strong>Color</strong>
-                <p>{selectedAsset.color || "—"}</p>
-              </div>
+                <div>
+                  <strong>Finish</strong>
+                  <p>{selectedAsset.finish || "—"}</p>
+                </div>
 
-              <div style={{ gridColumn: "span 4" }}>
-                <strong>Usage</strong>
-                <p>{selectedAsset.usage || "—"}</p>
+                <div>
+                  <strong>Color</strong>
+                  <p>{selectedAsset.color || "—"}</p>
+                </div>
+
+                <div>
+                  <strong>Project</strong>
+                  <p>{selectedAsset.project || "Unassigned"}</p>
+                </div>
+
+                <div>
+                  <strong>Favorite</strong>
+                  <p>{selectedAsset.favorite ? "Yes" : "No"}</p>
+                </div>
+
+                <div style={{ gridColumn: "span 2" }}>
+                  <strong>Usage</strong>
+                  <p>{selectedAsset.usage || "—"}</p>
+                </div>
+
+                <div style={{ gridColumn: "span 2" }}>
+                  <strong>Notes</strong>
+                  <p>{selectedAsset.notes || "—"}</p>
+                </div>
+
+                <div style={{ gridColumn: "span 2" }}>
+                  <strong>Specifications</strong>
+                  <p>{selectedAsset.specifications || "—"}</p>
+                </div>
               </div>
             </div>
 
@@ -685,6 +1122,10 @@ export default function App() {
                 Duplicate Selected
               </button>
 
+              <button onClick={() => toggleFavorite(selectedAsset.id)} style={secondaryButtonStyle}>
+                {selectedAsset.favorite ? "Remove Favorite" : "Add Favorite"}
+              </button>
+
               <button onClick={() => setSelectedAsset(null)} style={secondaryButtonStyle}>
                 Close Panel
               </button>
@@ -693,8 +1134,52 @@ export default function App() {
         </section>
       )}
 
-      <section style={{ marginTop: "60px" }}>
-        <h2>Asset Database</h2>
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>Manufacturer Directory</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "16px",
+            marginTop: "20px",
+          }}
+        >
+          {manufacturerStats.length > 0 ? (
+            manufacturerStats.map((manufacturer) => (
+              <div key={manufacturer.name} style={cardStyle}>
+                <p style={{ margin: 0, color: "#666" }}>{manufacturer.name}</p>
+                <strong style={{ fontSize: "30px" }}>{manufacturer.count}</strong>
+              </div>
+            ))
+          ) : (
+            <div style={cardStyle}>No manufacturers yet.</div>
+          )}
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, marginTop: "40px" }}>
+        <h2 style={{ textAlign: "center" }}>Project Assignment</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "16px",
+            marginTop: "20px",
+          }}
+        >
+          {projectStats.map((project) => (
+            <div key={project.name} style={cardStyle}>
+              <p style={{ margin: 0, color: "#666" }}>{project.name}</p>
+              <strong style={{ fontSize: "30px" }}>{project.count}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={{ ...sectionStyle, marginTop: "60px" }}>
+        <h2 style={{ textAlign: "center" }}>Asset Database</h2>
 
         <div style={{ overflowX: "auto", marginTop: "20px" }}>
           <table
@@ -706,6 +1191,7 @@ export default function App() {
           >
             <thead>
               <tr>
+                <th style={tableHeaderStyle}>Image</th>
                 <th style={tableHeaderStyle}>ID</th>
                 <th style={tableHeaderStyle}>Type</th>
                 <th style={tableHeaderStyle}>Name</th>
@@ -713,8 +1199,9 @@ export default function App() {
                 <th style={tableHeaderStyle}>Manufacturer</th>
                 <th style={tableHeaderStyle}>Finish</th>
                 <th style={tableHeaderStyle}>Color</th>
-                <th style={tableHeaderStyle}>Usage</th>
+                <th style={tableHeaderStyle}>Project</th>
                 <th style={tableHeaderStyle}>Status</th>
+                <th style={tableHeaderStyle}>Favorite</th>
                 <th style={tableHeaderStyle}>Actions</th>
               </tr>
             </thead>
@@ -729,6 +1216,37 @@ export default function App() {
                     background: selectedAsset?.id === asset.id ? "#f4f1ea" : "white",
                   }}
                 >
+                  <td style={tableCellStyle}>
+                    {getAssetImage(asset) ? (
+                      <img
+                        src={getAssetImage(asset)}
+                        alt={asset.name}
+                        style={{
+                          width: "70px",
+                          height: "70px",
+                          objectFit: "cover",
+                          borderRadius: "10px",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "70px",
+                          height: "70px",
+                          borderRadius: "10px",
+                          background: "#eee",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "12px",
+                          color: "#777",
+                        }}
+                      >
+                        No image
+                      </div>
+                    )}
+                  </td>
+
                   <td style={tableCellStyle}>{asset.id}</td>
                   <td style={tableCellStyle}>{asset.category}</td>
                   <td style={tableCellStyle}>{asset.name}</td>
@@ -736,10 +1254,11 @@ export default function App() {
                   <td style={tableCellStyle}>{asset.manufacturer}</td>
                   <td style={tableCellStyle}>{asset.finish}</td>
                   <td style={tableCellStyle}>{asset.color}</td>
-                  <td style={tableCellStyle}>{asset.usage}</td>
+                  <td style={tableCellStyle}>{asset.project || "Unassigned"}</td>
                   <td style={tableCellStyle}>
                     <span style={getStatusStyle(asset.status)}>{asset.status}</span>
                   </td>
+                  <td style={tableCellStyle}>{asset.favorite ? "★" : "☆"}</td>
                   <td style={tableCellStyle}>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
@@ -765,6 +1284,16 @@ export default function App() {
                       <button
                         onClick={(event) => {
                           event.stopPropagation();
+                          toggleFavorite(asset.id);
+                        }}
+                        style={{ ...secondaryButtonStyle, padding: "8px 10px" }}
+                      >
+                        {asset.favorite ? "Unstar" : "Star"}
+                      </button>
+
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
                           deleteAsset(asset.id);
                         }}
                         style={dangerButtonStyle}
@@ -779,7 +1308,7 @@ export default function App() {
               {filteredAssets.length === 0 && (
                 <tr>
                   <td
-                    colSpan="10"
+                    colSpan="12"
                     style={{
                       ...tableCellStyle,
                       textAlign: "center",
@@ -796,5 +1325,5 @@ export default function App() {
         </div>
       </section>
     </main>
-      );
+    );
 }
