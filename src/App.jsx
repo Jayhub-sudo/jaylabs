@@ -2,9 +2,20 @@ import { useState } from "react";
 import assetData from "../assets/assets.json";
 
 export default function App() {
-  const [materials, setMaterials] = useState(assetData.materials);
+  const initialAssets = [
+    ...assetData.materials.map((item) => ({ ...item, category: item.category || "Material" })),
+    ...assetData.fabrics.map((item) => ({ ...item, category: item.category || "Fabric" })),
+    ...assetData.carpets.map((item) => ({ ...item, category: item.category || "Carpet" })),
+    ...assetData.flooring.map((item) => ({ ...item, category: item.category || "Flooring" })),
+    ...assetData.wallcoverings.map((item) => ({ ...item, category: item.category || "Wallcovering" })),
+    ...assetData.furniture.map((item) => ({ ...item, category: item.category || "Furniture" })),
+  ];
+
+  const [assets, setAssets] = useState(initialAssets);
 
   const [form, setForm] = useState({
+    category: "Material",
+    productNumber: "",
     name: "",
     manufacturer: "",
     finish: "",
@@ -12,28 +23,52 @@ export default function App() {
   });
 
   const categories = [
-    { name: "Materials", count: materials.length },
-    { name: "Fabrics", count: assetData.fabrics.length },
-    { name: "Carpets", count: assetData.carpets.length },
-    { name: "Flooring", count: assetData.flooring.length },
-    { name: "Wallcoverings", count: assetData.wallcoverings.length },
-    { name: "Furniture", count: assetData.furniture.length },
+    { name: "Materials", count: assets.filter((asset) => asset.category === "Material").length },
+    { name: "Fabrics", count: assets.filter((asset) => asset.category === "Fabric").length },
+    { name: "Carpets", count: assets.filter((asset) => asset.category === "Carpet").length },
+    { name: "Flooring", count: assets.filter((asset) => asset.category === "Flooring").length },
+    { name: "Wallcoverings", count: assets.filter((asset) => asset.category === "Wallcovering").length },
+    { name: "Furniture", count: assets.filter((asset) => asset.category === "Furniture").length },
   ];
 
-  const totalAssets = categories.reduce((sum, item) => sum + item.count, 0);
+  const totalAssets = assets.length;
 
-  function addMaterial() {
-    const newMaterial = {
-      id: `MAT-${String(materials.length + 1).padStart(3, "0")}`,
+  function getPrefix(category) {
+    const prefixes = {
+      Material: "MAT",
+      Fabric: "FAB",
+      Carpet: "CAR",
+      Flooring: "FLR",
+      Wallcovering: "WAL",
+      Furniture: "FUR",
+      Lighting: "LGT",
+      Artwork: "ART",
+      Accessory: "ACC",
+    };
+
+    return prefixes[category] || "AST";
+  }
+
+  function addAsset() {
+    const prefix = getPrefix(form.category);
+
+    const matchingAssets = assets.filter((asset) => asset.id?.startsWith(prefix));
+
+    const newAsset = {
+      id: `${prefix}-${String(matchingAssets.length + 1).padStart(3, "0")}`,
+      category: form.category,
+      productNumber: form.productNumber,
       name: form.name,
       manufacturer: form.manufacturer,
       finish: form.finish,
       status: form.status,
     };
 
-    setMaterials([...materials, newMaterial]);
+    setAssets([...assets, newAsset]);
 
     setForm({
+      category: "Material",
+      productNumber: "",
       name: "",
       manufacturer: "",
       finish: "",
@@ -112,16 +147,29 @@ export default function App() {
         <h2>Add Asset</h2>
 
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "20px" }}>
-          <select>
-  <option>Asset Type</option>
-  <option>Material</option>
-  <option>Fabric</option>
-  <option>Carpet</option>
-  <option>Furniture</option>
-  <option>Lighting</option>
-</select>
+          <select
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          >
+            <option value="Material">Material</option>
+            <option value="Fabric">Fabric</option>
+            <option value="Carpet">Carpet</option>
+            <option value="Flooring">Flooring</option>
+            <option value="Wallcovering">Wallcovering</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Lighting">Lighting</option>
+            <option value="Artwork">Artwork</option>
+            <option value="Accessory">Accessory</option>
+          </select>
+
           <input
-           placeholder="Asset Name"
+            placeholder="Product Number"
+            value={form.productNumber}
+            onChange={(e) => setForm({ ...form, productNumber: e.target.value })}
+          />
+
+          <input
+            placeholder="Asset Name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
           />
@@ -144,7 +192,7 @@ export default function App() {
             onChange={(e) => setForm({ ...form, status: e.target.value })}
           />
 
-          <button onClick={addMaterial}>Add Asset</button>
+          <button onClick={addAsset}>Add Asset</button>
         </div>
       </section>
 
@@ -155,7 +203,9 @@ export default function App() {
           <thead>
             <tr>
               <th style={{ border: "1px solid #ddd", padding: "12px" }}>ID</th>
+              <th style={{ border: "1px solid #ddd", padding: "12px" }}>Type</th>
               <th style={{ border: "1px solid #ddd", padding: "12px" }}>Name</th>
+              <th style={{ border: "1px solid #ddd", padding: "12px" }}>Product Number</th>
               <th style={{ border: "1px solid #ddd", padding: "12px" }}>Manufacturer</th>
               <th style={{ border: "1px solid #ddd", padding: "12px" }}>Finish</th>
               <th style={{ border: "1px solid #ddd", padding: "12px" }}>Status</th>
@@ -163,13 +213,15 @@ export default function App() {
           </thead>
 
           <tbody>
-            {materials.map((material) => (
-              <tr key={material.id}>
-                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{material.id}</td>
-                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{material.name}</td>
-                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{material.manufacturer}</td>
-                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{material.finish}</td>
-                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{material.status}</td>
+            {assets.map((asset) => (
+              <tr key={asset.id}>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.id}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.category}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.name}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.productNumber}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.manufacturer}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.finish}</td>
+                <td style={{ border: "1px solid #ddd", padding: "12px" }}>{asset.status}</td>
               </tr>
             ))}
           </tbody>
