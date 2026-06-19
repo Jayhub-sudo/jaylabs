@@ -14,6 +14,17 @@ export default function App() {
     "Accessory",
   ];
 
+  const emptyForm = {
+    category: "Material",
+    productNumber: "",
+    name: "",
+    manufacturer: "",
+    finish: "",
+    color: "",
+    usage: "",
+    status: "Active",
+  };
+
   const initialAssets = [
     ...assetData.materials.map((item) => ({
       productNumber: "",
@@ -70,19 +81,13 @@ export default function App() {
     return savedAssets ? JSON.parse(savedAssets) : initialAssets;
   });
 
-  const [form, setForm] = useState({
-    category: "Material",
-    productNumber: "",
-    name: "",
-    manufacturer: "",
-    finish: "",
-    color: "",
-    usage: "",
-    status: "Active",
-  });
-
+  const [form, setForm] = useState(emptyForm);
+  const [editForm, setEditForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
+  const [selectedAsset, setSelectedAsset] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
   const [error, setError] = useState("");
 
   const categories = assetTypes.map((type) => ({
@@ -92,7 +97,8 @@ export default function App() {
 
   const totalAssets = assets.length;
   const activeAssets = assets.filter((asset) => asset.status === "Active").length;
-  const inactiveAssets = assets.filter((asset) => asset.status !== "Active").length;
+  const discontinuedAssets = assets.filter((asset) => asset.status === "Discontinued").length;
+  const pendingAssets = assets.filter((asset) => asset.status === "Pending Review").length;
 
   const filteredAssets = assets.filter((asset) => {
     const searchText = `
@@ -109,8 +115,9 @@ export default function App() {
 
     const matchesSearch = searchText.includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "All" || asset.category === typeFilter;
+    const matchesStatus = statusFilter === "All" || asset.status === statusFilter;
 
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   function saveAssets(nextAssets) {
@@ -134,14 +141,17 @@ export default function App() {
     return prefixes[category] || "AST";
   }
 
-  function addAsset() {
-    if (!form.name.trim()) {
-      setError("Asset Name is required.");
-      return;
-    }
+  function validateAsset(asset) {
+    if (!asset.name.trim()) return "Asset Name is required.";
+    if (!asset.manufacturer.trim()) return "Manufacturer is required.";
+    return "";
+  }
 
-    if (!form.manufacturer.trim()) {
-      setError("Manufacturer is required.");
+  function addAsset() {
+    const validationMessage = validateAsset(form);
+
+    if (validationMessage) {
+      setError(validationMessage);
       return;
     }
 
@@ -161,18 +171,63 @@ export default function App() {
     };
 
     saveAssets([newAsset, ...assets]);
+    setForm(emptyForm);
+    setError("");
+    setSelectedAsset(newAsset);
+  }
 
-    setForm({
-      category: "Material",
-      productNumber: "",
-      name: "",
-      manufacturer: "",
-      finish: "",
-      color: "",
-      usage: "",
-      status: "Active",
+  function startEdit(asset) {
+    setEditingId(asset.id);
+    setEditForm({
+      category: asset.category || "Material",
+      productNumber: asset.productNumber || "",
+      name: asset.name || "",
+      manufacturer: asset.manufacturer || "",
+      finish: asset.finish || "",
+      color: asset.color || "",
+      usage: asset.usage || "",
+      status: asset.status || "Active",
     });
+    setSelectedAsset(asset);
+    setError("");
+  }
 
+  function saveEdit() {
+    const validationMessage = validateAsset(editForm);
+
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
+
+    const nextAssets = assets.map((asset) =>
+      asset.id === editingId
+        ? {
+            ...asset,
+            category: editForm.category,
+            productNumber: editForm.productNumber,
+            name: editForm.name,
+            manufacturer: editForm.manufacturer,
+            finish: editForm.finish,
+            color: editForm.color,
+            usage: editForm.usage,
+            status: editForm.status,
+          }
+        : asset
+    );
+
+    saveAssets(nextAssets);
+
+    const updatedAsset = nextAssets.find((asset) => asset.id === editingId);
+    setSelectedAsset(updatedAsset);
+    setEditingId(null);
+    setEditForm(emptyForm);
+    setError("");
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditForm(emptyForm);
     setError("");
   }
 
@@ -182,6 +237,29 @@ export default function App() {
 
     const nextAssets = assets.filter((asset) => asset.id !== id);
     saveAssets(nextAssets);
+
+    if (selectedAsset?.id === id) {
+      setSelectedAsset(null);
+    }
+
+    if (editingId === id) {
+      cancelEdit();
+    }
+  }
+
+  function duplicateAsset(asset) {
+    const prefix = getPrefix(asset.category);
+    const matchingAssets = assets.filter((item) => item.id?.startsWith(prefix));
+
+    const duplicatedAsset = {
+      ...asset,
+      id: `${prefix}-${String(matchingAssets.length + 1).padStart(3, "0")}`,
+      name: `${asset.name} Copy`,
+      status: "Pending Review",
+    };
+
+    saveAssets([duplicatedAsset, ...assets]);
+    setSelectedAsset(duplicatedAsset);
   }
 
   function resetDemoData() {
@@ -192,6 +270,34 @@ export default function App() {
     setAssets(initialAssets);
     setSearchTerm("");
     setTypeFilter("All");
+    setStatusFilter("All");
+    setSelectedAsset(null);
+    setEditingId(null);
+    setError("");
+  }
+
+  function getStatusStyle(status) {
+    const base = {
+      display: "inline-block",
+      padding: "6px 10px",
+      borderRadius: "999px",
+      fontSize: "13px",
+      fontWeight: "bold",
+    };
+
+    if (status === "Active") {
+      return { ...base, background: "#e8f5e9", color: "#1b5e20" };
+    }
+
+    if (status === "Discontinued") {
+      return { ...base, background: "#ffebee", color: "#b71c1c" };
+    }
+
+    if (status === "Pending Review") {
+      return { ...base, background: "#fff8e1", color: "#8a5a00" };
+    }
+
+    return { ...base, background: "#eeeeee", color: "#444" };
   }
 
   const pageStyle = {
@@ -211,25 +317,39 @@ export default function App() {
   };
 
   const inputStyle = {
-    padding: "10px",
+    padding: "12px",
     border: "1px solid #ccc",
-    borderRadius: "8px",
+    borderRadius: "10px",
     minWidth: "180px",
+    fontSize: "15px",
   };
 
   const buttonStyle = {
-    padding: "10px 16px",
+    padding: "11px 16px",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: "10px",
     background: "#111",
     color: "white",
     cursor: "pointer",
+    fontWeight: "bold",
+  };
+
+  const secondaryButtonStyle = {
+    ...buttonStyle,
+    background: "#777",
+  };
+
+  const dangerButtonStyle = {
+    ...buttonStyle,
+    background: "#b00020",
+    padding: "8px 12px",
   };
 
   const tableCellStyle = {
     border: "1px solid #ddd",
     padding: "12px",
     textAlign: "left",
+    verticalAlign: "top",
   };
 
   const tableHeaderStyle = {
@@ -237,6 +357,84 @@ export default function App() {
     background: "#f1f1ef",
     fontWeight: "bold",
   };
+
+  function renderAssetForm(currentForm, setCurrentForm) {
+    return (
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "12px",
+          marginTop: "20px",
+        }}
+      >
+        <select
+          value={currentForm.category}
+          onChange={(e) => setCurrentForm({ ...currentForm, category: e.target.value })}
+          style={inputStyle}
+        >
+          {assetTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+
+        <input
+          placeholder="Product Number"
+          value={currentForm.productNumber}
+          onChange={(e) => setCurrentForm({ ...currentForm, productNumber: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Asset Name *"
+          value={currentForm.name}
+          onChange={(e) => setCurrentForm({ ...currentForm, name: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Manufacturer *"
+          value={currentForm.manufacturer}
+          onChange={(e) => setCurrentForm({ ...currentForm, manufacturer: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Finish"
+          value={currentForm.finish}
+          onChange={(e) => setCurrentForm({ ...currentForm, finish: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Color"
+          value={currentForm.color}
+          onChange={(e) => setCurrentForm({ ...currentForm, color: e.target.value })}
+          style={inputStyle}
+        />
+
+        <input
+          placeholder="Usage"
+          value={currentForm.usage}
+          onChange={(e) => setCurrentForm({ ...currentForm, usage: e.target.value })}
+          style={inputStyle}
+        />
+
+        <select
+          value={currentForm.status}
+          onChange={(e) => setCurrentForm({ ...currentForm, status: e.target.value })}
+          style={inputStyle}
+        >
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Discontinued">Discontinued</option>
+          <option value="Pending Review">Pending Review</option>
+        </select>
+      </div>
+    );
+  }
 
   return (
     <main style={pageStyle}>
@@ -249,7 +447,7 @@ export default function App() {
           Asset Library Dashboard
         </h1>
 
-        <p style={{ fontSize: "18px", color: "#666", maxWidth: "800px" }}>
+        <p style={{ fontSize: "18px", color: "#666", maxWidth: "850px" }}>
           Digital material library, scanning workflow, FF&E asset intelligence,
           and project-ready product information.
         </p>
@@ -277,13 +475,13 @@ export default function App() {
           </div>
 
           <div style={cardStyle}>
-            <p>Inactive Assets</p>
-            <strong style={{ fontSize: "36px" }}>{inactiveAssets}</strong>
+            <p>Discontinued</p>
+            <strong style={{ fontSize: "36px" }}>{discontinuedAssets}</strong>
           </div>
 
           <div style={cardStyle}>
-            <p>Scanning Studio</p>
-            <strong style={{ fontSize: "32px" }}>Ready</strong>
+            <p>Pending Review</p>
+            <strong style={{ fontSize: "36px" }}>{pendingAssets}</strong>
           </div>
         </div>
       </section>
@@ -342,12 +540,25 @@ export default function App() {
             ))}
           </select>
 
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="All">All Statuses</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Discontinued">Discontinued</option>
+            <option value="Pending Review">Pending Review</option>
+          </select>
+
           <button
             onClick={() => {
               setSearchTerm("");
               setTypeFilter("All");
+              setStatusFilter("All");
             }}
-            style={{ ...buttonStyle, background: "#666" }}
+            style={secondaryButtonStyle}
           >
             Clear Search
           </button>
@@ -359,7 +570,7 @@ export default function App() {
       </section>
 
       <section style={{ marginTop: "40px" }}>
-        <h2>Add Asset</h2>
+        <h2>{editingId ? "Edit Asset" : "Add Asset"}</h2>
 
         {error && (
           <div
@@ -376,93 +587,111 @@ export default function App() {
           </div>
         )}
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "12px",
-            marginTop: "20px",
-          }}
-        >
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            style={inputStyle}
-          >
-            {assetTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-
-          <input
-            placeholder="Product Number"
-            value={form.productNumber}
-            onChange={(e) => setForm({ ...form, productNumber: e.target.value })}
-            style={inputStyle}
-          />
-
-          <input
-            placeholder="Asset Name *"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            style={inputStyle}
-          />
-
-          <input
-            placeholder="Manufacturer *"
-            value={form.manufacturer}
-            onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
-            style={inputStyle}
-          />
-
-          <input
-            placeholder="Finish"
-            value={form.finish}
-            onChange={(e) => setForm({ ...form, finish: e.target.value })}
-            style={inputStyle}
-          />
-
-          <input
-            placeholder="Color"
-            value={form.color}
-            onChange={(e) => setForm({ ...form, color: e.target.value })}
-            style={inputStyle}
-          />
-
-          <input
-            placeholder="Usage"
-            value={form.usage}
-            onChange={(e) => setForm({ ...form, usage: e.target.value })}
-            style={inputStyle}
-          />
-
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            style={inputStyle}
-          >
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Discontinued">Discontinued</option>
-            <option value="Pending Review">Pending Review</option>
-          </select>
-        </div>
+        {editingId ? renderAssetForm(editForm, setEditForm) : renderAssetForm(form, setForm)}
 
         <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-          <button onClick={addAsset} style={buttonStyle}>
-            Add Asset
-          </button>
+          {editingId ? (
+            <>
+              <button onClick={saveEdit} style={buttonStyle}>
+                Save Changes
+              </button>
 
-          <button
-            onClick={resetDemoData}
-            style={{ ...buttonStyle, background: "#999" }}
-          >
-            Reset Demo Data
-          </button>
+              <button onClick={cancelEdit} style={secondaryButtonStyle}>
+                Cancel Edit
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={addAsset} style={buttonStyle}>
+                Add Asset
+              </button>
+
+              <button onClick={resetDemoData} style={secondaryButtonStyle}>
+                Reset Demo Data
+              </button>
+            </>
+          )}
         </div>
       </section>
+
+      {selectedAsset && (
+        <section style={{ marginTop: "40px" }}>
+          <h2>Selected Asset</h2>
+
+          <div style={cardStyle}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "16px",
+              }}
+            >
+              <div>
+                <strong>ID</strong>
+                <p>{selectedAsset.id}</p>
+              </div>
+
+              <div>
+                <strong>Type</strong>
+                <p>{selectedAsset.category}</p>
+              </div>
+
+              <div>
+                <strong>Name</strong>
+                <p>{selectedAsset.name}</p>
+              </div>
+
+              <div>
+                <strong>Status</strong>
+                <p>
+                  <span style={getStatusStyle(selectedAsset.status)}>
+                    {selectedAsset.status}
+                  </span>
+                </p>
+              </div>
+
+              <div>
+                <strong>Product Number</strong>
+                <p>{selectedAsset.productNumber || "—"}</p>
+              </div>
+
+              <div>
+                <strong>Manufacturer</strong>
+                <p>{selectedAsset.manufacturer || "—"}</p>
+              </div>
+
+              <div>
+                <strong>Finish</strong>
+                <p>{selectedAsset.finish || "—"}</p>
+              </div>
+
+              <div>
+                <strong>Color</strong>
+                <p>{selectedAsset.color || "—"}</p>
+              </div>
+
+              <div style={{ gridColumn: "span 4" }}>
+                <strong>Usage</strong>
+                <p>{selectedAsset.usage || "—"}</p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+              <button onClick={() => startEdit(selectedAsset)} style={buttonStyle}>
+                Edit Selected
+              </button>
+
+              <button onClick={() => duplicateAsset(selectedAsset)} style={secondaryButtonStyle}>
+                Duplicate Selected
+              </button>
+
+              <button onClick={() => setSelectedAsset(null)} style={secondaryButtonStyle}>
+                Close Panel
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section style={{ marginTop: "60px" }}>
         <h2>Asset Database</h2>
@@ -492,7 +721,14 @@ export default function App() {
 
             <tbody>
               {filteredAssets.map((asset) => (
-                <tr key={asset.id}>
+                <tr
+                  key={asset.id}
+                  onClick={() => setSelectedAsset(asset)}
+                  style={{
+                    cursor: "pointer",
+                    background: selectedAsset?.id === asset.id ? "#f4f1ea" : "white",
+                  }}
+                >
                   <td style={tableCellStyle}>{asset.id}</td>
                   <td style={tableCellStyle}>{asset.category}</td>
                   <td style={tableCellStyle}>{asset.name}</td>
@@ -501,21 +737,41 @@ export default function App() {
                   <td style={tableCellStyle}>{asset.finish}</td>
                   <td style={tableCellStyle}>{asset.color}</td>
                   <td style={tableCellStyle}>{asset.usage}</td>
-                  <td style={tableCellStyle}>{asset.status}</td>
                   <td style={tableCellStyle}>
-                    <button
-                      onClick={() => deleteAsset(asset.id)}
-                      style={{
-                        background: "#b00020",
-                        color: "white",
-                        border: "none",
-                        padding: "6px 10px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Delete
-                    </button>
+                    <span style={getStatusStyle(asset.status)}>{asset.status}</span>
+                  </td>
+                  <td style={tableCellStyle}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          startEdit(asset);
+                        }}
+                        style={{ ...buttonStyle, padding: "8px 10px" }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          duplicateAsset(asset);
+                        }}
+                        style={{ ...secondaryButtonStyle, padding: "8px 10px" }}
+                      >
+                        Copy
+                      </button>
+
+                      <button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          deleteAsset(asset.id);
+                        }}
+                        style={dangerButtonStyle}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -540,5 +796,5 @@ export default function App() {
         </div>
       </section>
     </main>
-  );
+      );
 }
