@@ -39,6 +39,12 @@ export default function App() {
     imageUrl: "",
     imageData: "",
     favorite: false,
+    vendorContact: "",
+vendorEmail: "",
+vendorPhone: "",
+vendorWebsite: "",
+vendorNotes: "",
+rating: "3",
   };
 
   function normalizeAsset(asset, fallbackCategory) {
@@ -54,6 +60,12 @@ export default function App() {
       imageUrl: "",
       imageData: "",
       favorite: false,
+      vendorContact: "",
+      vendorEmail: "",
+      vendorPhone: "",
+      vendorWebsite: "",
+      vendorNotes: "",
+      rating: "3",
       ...asset,
       category: asset.category || fallbackCategory,
     };
