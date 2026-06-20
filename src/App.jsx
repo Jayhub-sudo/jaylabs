@@ -1182,7 +1182,35 @@ rating: "3",
                   <strong>Favorite</strong>
                   <p>{selectedAsset.favorite ? "Yes" : "No"}</p>
                 </div>
+<div>
+  <strong>Vendor Contact</strong>
+  <p>{selectedAsset.vendorContact || "—"}</p>
+</div>
 
+<div>
+  <strong>Vendor Email</strong>
+  <p>{selectedAsset.vendorEmail || "—"}</p>
+</div>
+
+<div>
+  <strong>Vendor Phone</strong>
+  <p>{selectedAsset.vendorPhone || "—"}</p>
+</div>
+
+<div>
+  <strong>Vendor Website</strong>
+  <p>{selectedAsset.vendorWebsite || "—"}</p>
+</div>
+
+<div style={{ gridColumn: "span 2" }}>
+  <strong>Vendor Notes</strong>
+  <p>{selectedAsset.vendorNotes || "—"}</p>
+</div>
+
+<div>
+  <strong>Rating</strong>
+  <p>{selectedAsset.rating || "—"}</p>
+</div>
                 <div style={{ gridColumn: "span 2" }}>
                   <strong>Usage</strong>
                   <p>{selectedAsset.usage || "—"}</p>
