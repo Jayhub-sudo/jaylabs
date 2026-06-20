@@ -240,6 +240,7 @@ rating: "3",
       rating: form.rating,
     };
 
+
     saveAssets([newAsset, ...assets]);
     setForm(emptyForm);
     setError("");
@@ -1317,7 +1318,11 @@ rating: "3",
                 <th style={tableHeaderStyle}>Project</th>
                 <th style={tableHeaderStyle}>Status</th>
                 <th style={tableHeaderStyle}>Favorite</th>
-                <th style={tableHeaderStyle}>Actions</th>
+                <th style={tableHeaderStyle}>Vendor Contact</th>
+                <th style={tableHeaderStyle}>Vendor Email</th>
+                <th style={tableHeaderStyle}>Rating</th>
+
+<th style={tableHeaderStyle}>Actions</th>
               </tr>
             </thead>
 
@@ -1374,8 +1379,12 @@ rating: "3",
                     <span style={getStatusStyle(asset.status)}>{asset.status}</span>
                   </td>
                   <td style={tableCellStyle}>{asset.favorite ? "★" : "☆"}</td>
+                
+                  <td style={tableCellStyle}>{asset.vendorContact || "-"}</td>
+                  <td style={tableCellStyle}>{asset.vendorEmail || "-"}</td>
+                  <td style={tableCellStyle}>{asset.rating || "-"}</td>
                   <td style={tableCellStyle}>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       <button
                         onClick={(event) => {
                           event.stopPropagation();
