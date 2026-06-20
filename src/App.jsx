@@ -232,6 +232,12 @@ rating: "3",
       imageUrl: form.imageUrl,
       imageData: form.imageData,
       favorite: form.favorite,
+      vendorContact: form.vendorContact,
+      vendorEmail: form.vendorEmail,
+      vendorPhone: form.vendorPhone,
+      vendorWebsite: form.vendorWebsite,
+      vendorNotes: form.vendorNotes,
+      rating: form.rating,
     };
 
     saveAssets([newAsset, ...assets]);
@@ -289,6 +295,12 @@ rating: "3",
             imageUrl: editForm.imageUrl,
             imageData: editForm.imageData,
             favorite: editForm.favorite,
+            vendorContact: editForm.vendorContact,
+            vendorEmail: editForm.vendorEmail,
+            vendorPhone: editForm.vendorPhone,
+            vendorWebsite: editForm.vendorWebsite,
+            vendorNotes: editForm.vendorNotes,
+            rating: editForm.rating,
           }
         : asset
     );
@@ -763,6 +775,69 @@ rating: "3",
               fontFamily: "Arial, sans-serif",
             }}
           />
+          <input
+  placeholder="Vendor Contact"
+  value={currentForm.vendorContact}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, vendorContact: e.target.value })
+  }
+  style={inputStyle}
+/>
+          <input
+  placeholder="Vendor Email"
+  value={currentForm.vendorEmail}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, vendorEmail: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<input
+  placeholder="Vendor Phone"
+  value={currentForm.vendorPhone}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, vendorPhone: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<input
+  placeholder="Vendor Website"
+  value={currentForm.vendorWebsite}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, vendorWebsite: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<textarea
+  placeholder="Vendor Notes"
+  value={currentForm.vendorNotes}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, vendorNotes: e.target.value })
+  }
+  style={{
+    ...inputStyle,
+    minHeight: "90px",
+    resize: "vertical",
+    fontFamily: "Arial, sans-serif",
+  }}
+/>
+
+<select
+  value={currentForm.rating}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, rating: e.target.value })
+  }
+  style={inputStyle}
+>
+  <option value="1">★☆☆☆☆</option>
+  <option value="2">★★☆☆☆</option>
+  <option value="3">★★★☆☆</option>
+  <option value="4">★★★★☆</option>
+  <option value="5">★★★★★</option>
+</select>
+
 
           <div>
             {currentForm.imageData || currentForm.imageUrl ? (
