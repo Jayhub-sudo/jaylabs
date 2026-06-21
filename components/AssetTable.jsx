@@ -20,6 +20,7 @@ export default function AssetTable({
       <h2 style={{ textAlign: "center" }}>Asset Database</h2>
 
       <div style={{ overflowX: "auto", marginTop: "20px" }}>
+        <table
           style={{
             width: "100%",
             borderCollapse: "collapse",
