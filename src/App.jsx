@@ -1,6 +1,7 @@
 import { useState } from "react";
 import assetData from "../assets/assets.json";
-import SelectedAsset from "./components/SelectedAsset";
+import SelectedAsset from "../components/SelectedAsset";
+import AssetTable from "../components/AssetTable";
 
 export default function App() {
   const assetTypes = [
@@ -1110,19 +1111,7 @@ rating: "3",
         </div>
       </section>
 
-  <SelectedAsset
-  selectedAsset={selectedAsset}
-  sectionStyle={sectionStyle}
-  cardStyle={cardStyle}
-  buttonStyle={buttonStyle}
-  secondaryButtonStyle={secondaryButtonStyle}
-  renderImagePreview={renderImagePreview}
-  getStatusStyle={getStatusStyle}
-  startEdit={startEdit}
-  duplicateAsset={duplicateAsset}
-  toggleFavorite={toggleFavorite}
-  setSelectedAsset={setSelectedAsset}
-/>
+      
 
       <section style={{ ...sectionStyle, marginTop: "40px" }}>
         <h2 style={{ textAlign: "center" }}>Manufacturer Directory</h2>
