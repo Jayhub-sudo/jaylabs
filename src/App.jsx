@@ -869,7 +869,7 @@ rating: "3",
 
   return (
     <main style={pageStyle}>
-      <section style={sectionStyle}>
+      <section style={{ ...sectionStyle, marginTop: "0px" }}>
         <p
           style={{
             letterSpacing: "4px",
@@ -878,7 +878,7 @@ rating: "3",
             textAlign: "center",
           }}
         >
-          JAYLABS / MATERIAL INTELLIGENCE
+          JAYLABS / MADA
         </p>
 
         <h1
@@ -888,23 +888,21 @@ rating: "3",
             textAlign: "center",
           }}
         >
-          Asset Library Dashboard
+          MADA
         </h1>
 
         <p
-          style={{
-            fontSize: "18px",
-            color: "#666",
-            maxWidth: "850px",
-            margin: "0 auto",
-            textAlign: "center",
-          }}
-        >
-          Digital material library, scanning workflow, FF&E asset intelligence,
-          project assignment, manufacturer tracking, and project-ready product information.
-        </p>
-      </section>
-
+  style={{
+    fontSize: "18px",
+    color: "#666",
+    maxWidth: "850px",
+    margin: "0 auto",
+    textAlign: "center",
+  }}
+>
+  Material Asset & Design Application for managing materials, finishes, furniture, vendors, project assignments, images, specifications, and design-ready asset intelligence.
+</p>
+</section>
       <section style={{ ...sectionStyle, marginTop: "40px" }}>
         <h2 style={{ textAlign: "center" }}>System Overview</h2>
 
