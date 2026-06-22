@@ -1352,6 +1352,19 @@ rating: "3",
           </table>
         </div>
       </section>
+      <SelectedAsset
+  selectedAsset={selectedAsset}
+  sectionStyle={sectionStyle}
+  cardStyle={cardStyle}
+  buttonStyle={buttonStyle}
+  secondaryButtonStyle={secondaryButtonStyle}
+  renderImagePreview={renderImagePreview}
+  getStatusStyle={getStatusStyle}
+  startEdit={startEdit}
+  duplicateAsset={duplicateAsset}
+  toggleFavorite={toggleFavorite}
+  setSelectedAsset={setSelectedAsset}
+/>
     </main>
     );
 }
