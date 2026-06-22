@@ -41,11 +41,15 @@ export default function App() {
     imageUrl: "",
     imageData: "",
     favorite: false,
-    vendorContact: "",
+vendorContact: "",
 vendorEmail: "",
 vendorPhone: "",
 vendorWebsite: "",
 vendorNotes: "",
+dimensions: "",
+cost: "",
+leadTime: "",
+warranty: "",
 rating: "3",
   };
 
@@ -67,6 +71,10 @@ rating: "3",
       vendorPhone: "",
       vendorWebsite: "",
       vendorNotes: "",
+      dimensions: "",
+      cost: "",
+      leadTime: "",
+      warranty: "",
       rating: "3",
       ...asset,
       category: asset.category || fallbackCategory,
@@ -778,7 +786,42 @@ rating: "3",
               fontFamily: "Arial, sans-serif",
             }}
           />
-          <input
+<input
+  placeholder="Dimensions"
+  value={currentForm.dimensions}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, dimensions: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<input
+  placeholder="Cost"
+  value={currentForm.cost}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, cost: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<input
+  placeholder="Lead Time"
+  value={currentForm.leadTime}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, leadTime: e.target.value })
+  }
+  style={inputStyle}
+/>
+
+<input
+  placeholder="Warranty"
+  value={currentForm.warranty}
+  onChange={(e) =>
+    setCurrentForm({ ...currentForm, warranty: e.target.value })
+  }
+  style={inputStyle}
+/>
+<input
   placeholder="Vendor Contact"
   value={currentForm.vendorContact}
   onChange={(e) =>
@@ -786,7 +829,7 @@ rating: "3",
   }
   style={inputStyle}
 />
-          <input
+<input
   placeholder="Vendor Email"
   value={currentForm.vendorEmail}
   onChange={(e) =>
